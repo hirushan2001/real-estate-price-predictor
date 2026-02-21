@@ -1,0 +1,25 @@
+1. Loading dataset...
+2. Defining target and features...
+3. Splitting data...
+Train size: 2062, Test size: 516
+4. Initializing and training CatBoostRegressor...
+0:	learn: 3190440.7628512	test: 3247568.0550658	best: 3247568.0550658 (0)	total: 169ms	remaining: 1m 24s
+100:	learn: 2328804.5312689	test: 2616648.3245435	best: 2613083.1984977 (84)	total: 4.14s	remaining: 16.3s
+Stopped by overfitting detector  (50 iterations wait)
+
+bestTest = 2613083.198
+bestIteration = 84
+
+Shrink model to first 85 iterations.
+
+5. Evaluating model...
+Root Mean Squared Error (RMSE): 2613083.20
+Mean Absolute Error (MAE): 1145972.31
+R-squared (R2 Score): 0.3734
+
+6. Saving model...
+Model successfully saved to catboost_land_model.cbm
+
+7. Generating SHAP summary plot...
+SHAP summary plot saved to shap_summary_plot.png
+Training process complete!
