@@ -9,6 +9,8 @@ This project is separated into a Python Data Science REST API layer and a modern
 ```text
 ml-assignment/
 │
+├── ML_Assignment_Report.ipynb # The Academic Colab Notebook
+│
 ├── data/               # Contains original scrape and cleaned CSV
 │   ├── raw/            
 │   └── processed/      
@@ -41,7 +43,7 @@ The backend model inference server uses Python and Flask.
 1. Open a terminal in the root repository directory.
 2. Install the target Python dependencies:
 ```bash
-pip install pandas catboost flask flask-cors
+pip install pandas scikit-learn catboost shap flask flask-cors
 ```
 3. Run the Flask Server:
 ```bash
@@ -67,8 +69,15 @@ npm run dev
 
 *The interface will generate and should automatically be served to `http://localhost:5173`. Select your district and click "Estimate" to hit the API!*
 
-## 📊 Model Details
-- Algorithm: **CatBoost Regressor**
-- Train/Test Split: **80% / 20%**
-- Predictive Features: `District (cat)`, `City (cat)`, `Land size (continuous)`, `Availability of electricity (binary)`, `Availability of tap water (binary)`.
-- **SHAP Note**: Interpretability tracking showed `District` as the overwhelming #1 priority for predicting value accurately, closely followed by `City`.
+## 📊 Academic Model Details
+
+1. **Baseline Model**: Evaluates a standard `RandomForestRegressor` via scikit-learn Pipeline to set a performance floor.
+2. **Main Algorithm**: **CatBoost Regressor** (Gradient Boosting that handles Sri Lankan city strings inherently).
+3. **Hyperparameter Tuning**: Utilizes `RandomizedSearchCV` cross-validation to algorithmically tune `iterations`, `learning_rate`, and `depth` to prevent overfitting.
+4. **Train/Test Split**: **80% / 20%**
+5. **Predictive Features**: `District` (categorical), `City` (categorical), `Land size` (continuous), `Availability of electricity` (binary), `Availability of tap water` (binary).
+
+## 🧠 Explainable AI (XAI)
+This project implements **SHAP (SHapley Additive exPlanations)** natively across the stack:
+- **Global Interpretability**: Built during `train_model.py`, proving `District` is the overwhelming #1 priority for predicting value accurately, closely followed by `City`.
+- **Local Interpretability (Dynamic XAI)**: The `/api/predict` endpoint dynamically calculates tree SHAP contributions per property submission. The React UI converts this into a visual force graph allowing end-users to see exactly how much $LKR their water/electricity hookups add to their property's valuation.
