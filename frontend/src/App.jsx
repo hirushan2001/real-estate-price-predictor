@@ -128,25 +128,25 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans p-4 sm:p-8">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans p-4 sm:p-8 print:p-2 print:min-h-0">
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-10 text-center">
+      <div className="max-w-7xl mx-auto mb-10 text-center print:mb-6">
         <div className="inline-flex items-center justify-center gap-3 mb-2">
-          <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-200">
-            <Home className="w-8 h-8 text-white" />
+          <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-200 print:shadow-none print:border print:border-indigo-600">
+            <Home className="w-8 h-8 text-white print:text-indigo-600" />
           </div>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight print:text-3xl">
             LankaLand Predictor
           </h1>
         </div>
-        <p className="text-lg text-slate-500 font-medium">
+        <p className="text-lg text-slate-500 font-medium print:text-base">
           Analytics Dashboard & Intelligent Real Estate Valuation
         </p>
       </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 print:flex print:flex-row print:gap-6 print:items-start">
         {/* LEFT COLUMN: Input Form */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        <div className="lg:col-span-5 flex flex-col gap-6 print:w-5/12 print:gap-4">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
               <Calculator className="w-5 h-5 text-indigo-500" />
@@ -268,7 +268,7 @@ function App() {
         </div>
 
         {/* RIGHT COLUMN: Insights & Results */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
+        <div className="lg:col-span-7 flex flex-col gap-6 print:w-7/12 print:gap-4">
 
           {/* Market Insight Box */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm">
@@ -282,17 +282,17 @@ function App() {
           </div>
 
           {/* Valuation Results Card */}
-          <div className="bg-[#0f172a] rounded-2xl shadow-xl overflow-hidden flex-grow flex flex-col relative border border-slate-800 isolate transition-all">
+          <div className="bg-[#0f172a] rounded-2xl shadow-xl overflow-hidden flex-grow flex flex-col relative border border-slate-800 isolate transition-all print:break-inside-avoid print:bg-white print:border-slate-300 print:shadow-none">
             {/* Background design accents */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none print:hidden"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none print:hidden"></div>
 
-            <div className="p-8 flex-grow flex flex-col justify-center">
+            <div className="p-8 flex-grow flex flex-col justify-center print:p-6 print:justify-start">
               {result ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="flex justify-between items-start border-b border-slate-700/50 pb-6 print:border-b-0 print:pb-0">
+                  <div className="flex justify-between items-start border-b border-slate-700/50 pb-6 print:border-b print:border-slate-200 print:pb-4">
                     <div>
-                      <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1">Estimated Value</h2>
+                      <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1 print:text-slate-500">Estimated Value</h2>
                       <div className="text-xl text-white font-medium flex items-center gap-2 print:text-slate-900">
                         {city}, {district}
                       </div>
@@ -305,16 +305,16 @@ function App() {
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
+                  <div className="flex flex-col xl:flex-row gap-8 print:gap-4 print:mt-4">
+                    <div className="flex-1">
                       <p className="text-slate-400 text-sm font-medium mb-2 print:text-slate-500">Price Per Perch</p>
-                      <p className="text-3xl font-bold text-slate-100 tracking-tight print:text-slate-900">
+                      <p className="text-3xl font-bold text-slate-100 tracking-tight print:text-slate-900 pr-1">
                         {formatCurrency(result.price_per_perch)}
                       </p>
                     </div>
-                    <div>
+                    <div className="flex-[1.5]">
                       <p className="text-slate-400 text-sm font-medium mb-2 print:text-slate-500">Total Property Value ({landSize} perches)</p>
-                      <p className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300 tracking-tight print:text-indigo-700">
+                      <p className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300 tracking-tight print:text-indigo-700 pr-2 pb-1">
                         {formatCurrency(result.total_price)}
                       </p>
                     </div>
