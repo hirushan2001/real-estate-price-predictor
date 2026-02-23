@@ -1,7 +1,11 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import OrdinalEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 from catboost import CatBoostRegressor
 import shap
 import matplotlib.pyplot as plt
@@ -29,45 +33,99 @@ def main():
     
     print(f"Train size: {len(X_train)}, Test size: {len(X_test)}")
     
-    print("4. Initializing and training CatBoostRegressor...")
-    categorical_features_indices = [0, 1]  # 'District' and 'City' are at index 0 and 1
+    print("\n--- BASELINE MODEL COMPARISON ---")
+    print("4a. Training Random Forest Baseline...")
     
-    model = CatBoostRegressor(
-        iterations=500,
-        learning_rate=0.1,
-        depth=6,
-        random_seed=42,
-        cat_features=categorical_features_indices,
-        verbose=100  # Print progress every 100 iterations
+    # Preprocessing for baseline 
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1), ['District', 'City'])
+        ],
+        remainder='passthrough'
     )
     
-    model.fit(X_train, y_train, eval_set=(X_test, y_test), early_stopping_rounds=50)
+    rf_pipeline = Pipeline([
+        ('preprocessor', preprocessor),
+        ('model', RandomForestRegressor(n_estimators=100, random_state=42))
+    ])
     
-    print("\n5. Evaluating model...")
-    y_pred = model.predict(X_test)
+    rf_pipeline.fit(X_train, y_train)
+    rf_pred = rf_pipeline.predict(X_test)
+    
+    print("Random Forest Baseline Metrics:")
+    print(f"RMSE: {np.sqrt(mean_squared_error(y_test, rf_pred)):.2f}")
+    print(f"MAE:  {mean_absolute_error(y_test, rf_pred):.2f}")
+    print(f"R2:   {r2_score(y_test, rf_pred):.4f}")
+    
+    print("\n--- ADVANCED MODEL (CATBOOST) ---")
+    print("5a. Setting up Hyperparameter Tuning for CatBoost...")
+    
+    categorical_features_indices = ['District', 'City']  # 'District' and 'City'
+    
+    # Initial base model
+    cb_base = CatBoostRegressor(
+        random_seed=42,
+        verbose=0
+    )
+    
+    # Define hyperparameter grid
+    param_grid = {
+        'iterations': [200, 500],
+        'learning_rate': [0.05, 0.1, 0.2],
+        'depth': [4, 6]
+    }
+    
+    print("Running RandomizedSearchCV (this may take a minute)...")
+    random_search = RandomizedSearchCV(
+        estimator=cb_base,
+        param_distributions=param_grid,
+        n_iter=5, 
+        cv=3,
+        scoring='neg_root_mean_squared_error',
+        random_state=42,
+        n_jobs=-1
+    )
+    
+    random_search.fit(X_train, y_train, cat_features=categorical_features_indices)
+    
+    print(f"Best Hyperparameters found: {random_search.best_params_}")
+    
+    print("\n5b. Training Best CatBoost Model with Early Stopping...")
+    best_params = random_search.best_params_
+    
+    final_model = CatBoostRegressor(
+        iterations=best_params['iterations'],
+        learning_rate=best_params['learning_rate'],
+        depth=best_params['depth'],
+        cat_features=categorical_features_indices,
+        random_seed=42,
+        verbose=100
+    )
+    
+    final_model.fit(X_train, y_train, eval_set=(X_test, y_test), early_stopping_rounds=50)
+    
+    print("\n5c. Evaluating final tuned model...")
+    y_pred = final_model.predict(X_test)
     
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     
-    print(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
-    print(f"Mean Absolute Error (MAE): {mae:.2f}")
-    print(f"R-squared (R2 Score): {r2:.4f}")
+    print(f"Tuned CatBoost RMSE: {rmse:.2f}")
+    print(f"Tuned CatBoost MAE: {mae:.2f}")
+    print(f"Tuned CatBoost R2 Score: {r2:.4f}")
     
-    print("\n6. Saving model...")
+    print("\n6. Saving models and tools...")
     model_path = 'models/catboost_land_model.cbm'
-    model.save_model(model_path)
+    final_model.save_model(model_path)
     print(f"Model successfully saved to {model_path}")
     
     print("\n7. Generating SHAP summary plot...")
-    # Initialize JS visualization for SHAP if using notebooks, but for script we just plot
-    explainer = shap.TreeExplainer(model)
+    explainer = shap.TreeExplainer(final_model)
     shap_values = explainer.shap_values(X_test)
     
-    # Ensure matplotlib uses a non-interactive backend so it doesn't block execution
     plt.switch_backend('Agg')
-    
-    # Generate summary plot
+    plt.figure()
     shap.summary_plot(shap_values, X_test, show=False)
     plot_path = 'results/shap_summary_plot.png'
     plt.savefig(plot_path, bbox_inches='tight', dpi=300)

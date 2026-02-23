@@ -1,23 +1,35 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Home, MapPin, Map, Droplets, Zap, Ruler, Calculator } from 'lucide-react';
+import { Home, MapPin, Map as MapIcon, Droplets, Zap, Ruler, Calculator, Printer, Info, TrendingUp } from 'lucide-react';
 import './App.css';
+
+// Sample insight generator
+const getMarketInsight = (district) => {
+  if (!district) return "Select a district to view regional market insights and trends.";
+  const insights = {
+    "Colombo": "Colombo commands the highest premium in the country, driven by commercial development and luxury residential projects.",
+    "Gampaha": "Gampaha represents a rapidly growing suburban corridor with high demand for residential plots due to highway connectivity.",
+    "Kandy": "Kandy's real estate market is heavily influenced by tourism, heritage value, and pleasant climate, keeping land prices robust.",
+    "Galle": "Galle shows strong foreign investment interest, particularly in coastal and heritage properties, creating a dual-tier market.",
+    "Kurunegala": "A major transit hub, Kurunegala is seeing steady appreciation in land values, particularly for commercial use.",
+    "Default": `${district} shows steady market activity with regional development projects influencing long-term property values.`
+  };
+  return insights[district] || insights["Default"];
+}
 
 function App() {
   const [locations, setLocations] = useState({});
   const [districts, setDistricts] = useState([]);
   const [cities, setCities] = useState([]);
 
-  const [formData, setFormData] = useState({
-    district: '',
-    city: '',
-    land_size: 10,
-    has_electricity: false,
-    has_water: false
-  });
+  const [district, setDistrict] = useState('');
+  const [city, setCity] = useState('');
+  const [landSize, setLandSize] = useState(10);
+  const [hasElectricity, setHasElectricity] = useState(false);
+  const [hasWater, setHasWater] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [prediction, setPrediction] = useState(null);
+  const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
   // Fetch locations on component mount
@@ -26,18 +38,15 @@ function App() {
       try {
         const response = await axios.get('http://localhost:5000/api/locations');
         setLocations(response.data);
-        
+
         const districtList = Object.keys(response.data).sort();
         setDistricts(districtList);
-        
+
         // Form default
         if (districtList.length > 0) {
           const defaultDistrict = districtList[0];
-          setFormData(prev => ({
-            ...prev,
-            district: defaultDistrict,
-            city: response.data[defaultDistrict][0] || ''
-          }));
+          setDistrict(defaultDistrict);
+          setCity(response.data[defaultDistrict][0] || '');
           setCities(response.data[defaultDistrict]);
         }
       } catch (err) {
@@ -45,7 +54,7 @@ function App() {
         console.error(err);
       }
     };
-    
+
     fetchLocations();
   }, []);
 
@@ -53,22 +62,35 @@ function App() {
   const handleDistrictChange = (e) => {
     const newDistrict = e.target.value;
     const newCities = locations[newDistrict] || [];
-    
-    setFormData(prev => ({
-      ...prev,
-      district: newDistrict,
-      city: newCities.length > 0 ? newCities[0] : ''
-    }));
-    
+
+    setDistrict(newDistrict);
+    setCity(newCities.length > 0 ? newCities[0] : '');
     setCities(newCities);
+    setResult(null); // Clear previous result
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+  const handleCityChange = (e) => {
+    setCity(e.target.value);
+    setResult(null); // Clear previous result
+  };
+
+  const handleLandSizeChange = (e) => {
+    setLandSize(e.target.value);
+    setResult(null); // Clear previous result
+  };
+
+  const handleWaterChange = (e) => {
+    setHasWater(e.target.checked);
+    setResult(null); // Clear previous result
+  };
+
+  const handleElectricityChange = (e) => {
+    setHasElectricity(e.target.checked);
+    setResult(null); // Clear previous result
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const formatCurrency = (value) => {
@@ -83,20 +105,20 @@ function App() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setPrediction(null);
-    
+    setResult(null);
+
     try {
       const payload = {
-        district: formData.district,
-        city: formData.city,
-        land_size: Number(formData.land_size),
-        has_electricity: formData.has_electricity ? 1 : 0,
-        has_water: formData.has_water ? 1 : 0
+        district: district,
+        city: city,
+        land_size: Number(landSize),
+        has_electricity: hasElectricity ? 1 : 0,
+        has_water: hasWater ? 1 : 0
       };
-      
+
       const response = await axios.post('http://localhost:5000/api/predict', payload);
-      setPrediction(response.data);
-      
+      setResult(response.data);
+
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to get prediction. Please ensure backend is running.');
       console.error(err);
@@ -106,217 +128,288 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-3xl w-full space-y-8">
-        
-        {/* Header Label */}
-        <div className="text-center">
-          <div className="flex justify-center items-center gap-3 mb-4">
-            <div className="bg-indigo-600 p-3 rounded-full shadow-lg">
-              <Home className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-              LankaLand Predictor
-            </h1>
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans p-4 sm:p-8 print:p-2 print:min-h-0">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-10 text-center print:mb-6">
+        <div className="inline-flex items-center justify-center gap-3 mb-2">
+          <div className="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-200 print:shadow-none print:border print:border-indigo-600">
+            <Home className="w-8 h-8 text-white print:text-indigo-600" />
           </div>
-          <p className="mt-2 text-lg text-gray-600">
-            Intelligent Machine Learning API for Real Estate Valuations
-          </p>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight print:text-3xl">
+            LankaLand Predictor
+          </h1>
         </div>
+        <p className="text-lg text-slate-500 font-medium print:text-base">
+          Analytics Dashboard & Intelligent Real Estate Valuation
+        </p>
+      </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-          <div className="p-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 print:flex print:flex-row print:gap-6 print:items-start">
+        {/* LEFT COLUMN: Input Form */}
+        <div className="lg:col-span-5 flex flex-col gap-6 print:w-5/12 print:gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <Calculator className="w-5 h-5 text-indigo-500" />
+              Property Details
+            </h2>
+
             {error && (
-              <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-md">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-red-700 font-medium">{error}</p>
-                  </div>
-                </div>
+              <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md text-sm text-red-700">
+                {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              
-              <div className="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {/* District Select */}
                 <div>
-                  <label htmlFor="district" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Map className="w-4 h-4 text-indigo-500" />
-                    District
+                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                    <MapIcon className="w-4 h-4 text-indigo-400" /> District
                   </label>
                   <select
-                    id="district"
-                    name="district"
-                    value={formData.district}
+                    value={district}
                     onChange={handleDistrictChange}
-                    className="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 bg-gray-50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg transition-colors border shadow-sm"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                     required
                   >
-                    {districts.map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
+                    <option value="" disabled>Select District</option>
+                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
 
                 {/* City Select */}
                 <div>
-                  <label htmlFor="city" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <MapPin className="w-4 h-4 text-indigo-500" />
-                    City
+                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-indigo-400" /> City
                   </label>
                   <select
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    className="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 bg-gray-50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg transition-colors border shadow-sm"
+                    value={city}
+                    onChange={handleCityChange}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
                     required
-                    disabled={!formData.district}
+                    disabled={!district}
                   >
-                    {cities.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    <option value="" disabled>Select City</option>
+                    {cities.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
 
               {/* Land Size */}
               <div>
-                <label htmlFor="land_size" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Ruler className="w-4 h-4 text-indigo-500" />
-                  Land Size (Perches)
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                  <Ruler className="w-4 h-4 text-indigo-400" /> Land Size (Perches)
                 </label>
-                <div className="relative rounded-md shadow-sm mt-1">
+                <div className="relative">
                   <input
                     type="number"
-                    name="land_size"
-                    id="land_size"
-                    step="0.01"
+                    step="0.5"
                     min="1"
-                    className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-4 pr-12 py-3 sm:text-sm border-gray-300 rounded-lg border bg-gray-50 transition-colors"
-                    placeholder="10.0"
-                    value={formData.land_size}
-                    onChange={handleChange}
+                    value={landSize}
+                    onChange={handleLandSizeChange}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none font-medium"
                     required
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm font-medium">perches</span>
-                  </div>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">perches</span>
                 </div>
               </div>
 
               {/* Checkboxes */}
-              <div className="flex flex-col sm:flex-row gap-6 pt-2">
-                <div className="relative flex items-start">
-                  <div className="flex items-center h-5">
+              <div className="space-y-4 pt-2">
+                <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
+                  <div className="flex items-center h-6">
                     <input
-                      id="has_electricity"
-                      name="has_electricity"
                       type="checkbox"
-                      checked={formData.has_electricity}
-                      onChange={handleChange}
-                      className="focus:ring-indigo-500 h-5 w-5 text-indigo-600 border-gray-300 rounded cursor-pointer"
+                      checked={hasWater}
+                      onChange={handleWaterChange}
+                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </div>
-                  <div className="ml-3 text-sm">
-                    <label htmlFor="has_electricity" className="font-semibold text-gray-700 flex items-center gap-2 cursor-pointer select-none">
-                      <Zap className="w-4 h-4 text-yellow-500" />
-                      Availability of Electricity
-                    </label>
-                    <p className="text-gray-500">Connected to the national grid</p>
+                  <div>
+                    <div className="font-semibold text-slate-800 flex items-center gap-2">
+                      <Droplets className="w-4 h-4 text-blue-500" /> Tap Water Access
+                    </div>
+                    <div className="text-sm text-slate-500 mt-0.5">Connected to main water supply</div>
                   </div>
-                </div>
+                </label>
 
-                <div className="relative flex items-start">
-                  <div className="flex items-center h-5">
+                <label className="flex items-start gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
+                  <div className="flex items-center h-6">
                     <input
-                      id="has_water"
-                      name="has_water"
                       type="checkbox"
-                      checked={formData.has_water}
-                      onChange={handleChange}
-                      className="focus:ring-indigo-500 h-5 w-5 text-indigo-600 border-gray-300 rounded cursor-pointer"
+                      checked={hasElectricity}
+                      onChange={handleElectricityChange}
+                      className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </div>
-                  <div className="ml-3 text-sm">
-                    <label htmlFor="has_water" className="font-semibold text-gray-700 flex items-center gap-2 cursor-pointer select-none">
-                      <Droplets className="w-4 h-4 text-blue-500" />
-                      Availability of Tap Water
-                    </label>
-                    <p className="text-gray-500">Connected to main water supply</p>
+                  <div>
+                    <div className="font-semibold text-slate-800 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" /> National Grid Electricity
+                    </div>
+                    <div className="text-sm text-slate-500 mt-0.5">Direct connection to power grid</div>
                   </div>
-                </div>
+                </label>
               </div>
 
-              {/* Submit Button */}
-              <div className="pt-6">
+              <div className="pt-4">
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white transition-all duration-200 transform ${loading ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1 hover:shadow-xl'}`}
+                  className={`w-full py-4 px-6 rounded-xl font-bold text-white shadow-lg transition-all ${loading
+                    ? 'bg-indigo-400 cursor-wait'
+                    : 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5 shadow-indigo-200'
+                    }`}
                 >
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Calculating Valuation...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Calculator className="w-5 h-5" />
-                      Estimate Property Value
-                    </span>
-                  )}
+                  {loading ? 'Analyzing Market Data...' : 'Calculate Valuation'}
                 </button>
               </div>
             </form>
           </div>
         </div>
 
-        {/* Prediction Results Card */}
-        {prediction && (
-          <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
-            <div className="px-8 py-10">
-              <h2 className="text-xl font-medium text-indigo-100 mb-6 flex items-center justify-center gap-2">
-                <span className="w-10 h-px bg-indigo-400"></span>
-                Valuation Results
-                <span className="w-10 h-px bg-indigo-400"></span>
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                  <p className="text-indigo-200 text-sm font-semibold uppercase tracking-wider mb-2">Price Per Perch</p>
-                  <p className="text-3xl font-bold text-white tracking-tight">
-                    {formatCurrency(prediction.price_per_perch)}
-                  </p>
-                  <p className="text-indigo-300 text-sm mt-3 flex items-center gap-1">
-                    Based on CatBoost Model ML
-                  </p>
+        {/* RIGHT COLUMN: Insights & Results */}
+        <div className="lg:col-span-7 flex flex-col gap-6 print:w-7/12 print:gap-4">
+
+          {/* Market Insight Box */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm">
+            <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-indigo-600" />
+              Regional Market Insight
+            </h3>
+            <p className="text-slate-700 leading-relaxed font-medium">
+              {getMarketInsight(district)}
+            </p>
+          </div>
+
+          {/* Valuation Results Card */}
+          <div className="bg-[#0f172a] rounded-2xl shadow-xl overflow-hidden flex-grow flex flex-col relative border border-slate-800 isolate transition-all print:break-inside-avoid print:bg-white print:border-slate-300 print:shadow-none">
+            {/* Background design accents */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none print:hidden"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none print:hidden"></div>
+
+            <div className="p-8 flex-grow flex flex-col justify-center print:p-6 print:justify-start">
+              {result ? (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="flex justify-between items-start border-b border-slate-700/50 pb-6 print:border-b print:border-slate-200 print:pb-4">
+                    <div>
+                      <h2 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1 print:text-slate-500">Estimated Value</h2>
+                      <div className="text-xl text-white font-medium flex items-center gap-2 print:text-slate-900">
+                        {city}, {district}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handlePrint}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors border border-slate-700 print:hidden"
+                    >
+                      <Printer className="w-4 h-4" /> Export Report
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col xl:flex-row gap-8 print:gap-4 print:mt-4">
+                    <div className="flex-1">
+                      <p className="text-slate-400 text-sm font-medium mb-2 print:text-slate-500">Price Per Perch</p>
+                      <p className="text-3xl font-bold text-slate-100 tracking-tight print:text-slate-900 pr-1">
+                        {formatCurrency(result.price_per_perch)}
+                      </p>
+                    </div>
+                    <div className="flex-[1.5]">
+                      <p className="text-slate-400 text-sm font-medium mb-2 print:text-slate-500">Total Property Value ({landSize} perches)</p>
+                      <p className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300 tracking-tight print:text-indigo-700 pr-2 pb-1">
+                        {formatCurrency(result.total_price)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-colors relative overflow-hidden">
-                  <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-500 rounded-full opacity-20 blur-xl"></div>
-                  <p className="text-indigo-200 text-sm font-semibold uppercase tracking-wider mb-2">Total Est. Value</p>
-                  <p className="text-4xl font-extrabold text-white tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-indigo-100">
-                    {formatCurrency(prediction.total_price)}
-                  </p>
-                  <p className="text-indigo-300 text-sm mt-3">
-                    For {formData.land_size} {Number(formData.land_size) === 1 ? 'perch' : 'perches'}
+              ) : (
+                <div className="text-center text-slate-500 py-12">
+                  <Calculator className="w-16 h-16 mx-auto mb-4 text-slate-700 opacity-50" />
+                  <p className="text-lg">Enter property details and calculate to see valuation results here.</p>
+                </div>
+              )}
+            </div>
+
+            {/* AI Model Transparency (XAI) Box */}
+            <div className="bg-slate-900/50 border-t border-slate-800 p-6 mt-auto print:hidden rounded-b-2xl">
+              <div className="flex items-start gap-3 mb-4">
+                <Info className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-300 mb-1">Local Model Explainability (SHAP)</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    This chart explains exactly how the ML algorithm calculated this specific property's value.
+                    It starts from a baseline market average and adds/subtracts value based on your unique inputs.
                   </p>
                 </div>
               </div>
+
+              {result?.xai && (
+                <div className="mt-5 space-y-3">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 mb-2 border-b border-slate-700 pb-2">
+                    <span>Feature</span>
+                    <span className="text-center flex-1">Impact Direction</span>
+                    <span className="text-right w-24">Value Change</span>
+                  </div>
+
+                  {Object.entries(result.xai.contributions)
+                    .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a)) // Sort by absolute impact
+                    .map(([feature, impact]) => {
+                      const isPositive = impact >= 0;
+                      // Calculate width percentage relative to max impact for scaling
+                      const maxImpact = Math.max(...Object.values(result.xai.contributions).map(Math.abs));
+                      const widthPercent = Math.max((Math.abs(impact) / maxImpact) * 100, 1);
+
+                      return (
+                        <div key={feature} className="flex items-center gap-3">
+                          <div className="w-[85px] text-xs font-medium text-slate-300 truncate" title={feature}>
+                            {feature}
+                          </div>
+
+                          <div className="flex-1 flex items-center relative h-5">
+                            {/* Zero line */}
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-600 z-0"></div>
+
+                            {/* Bar container */}
+                            <div className="w-full flex h-full">
+                              {/* Negative side */}
+                              <div className="w-1/2 flex justify-end items-center pr-1 relative z-10">
+                                {!isPositive && (
+                                  <div
+                                    className="h-3.5 bg-rose-500/90 rounded-l shadow-[0_0_8px_rgba(244,63,94,0.3)] cursor-help transition-all hover:bg-rose-400"
+                                    style={{ width: `${widthPercent}%` }}
+                                    title={`${feature} decreased value by ${formatCurrency(Math.abs(impact))}`}
+                                  ></div>
+                                )}
+                              </div>
+
+                              {/* Positive side */}
+                              <div className="w-1/2 flex justify-start items-center pl-1 relative z-10">
+                                {isPositive && (
+                                  <div
+                                    className="h-3.5 bg-emerald-500/90 rounded-r shadow-[0_0_8px_rgba(16,185,129,0.3)] cursor-help transition-all hover:bg-emerald-400"
+                                    style={{ width: `${widthPercent}%` }}
+                                    title={`${feature} increased value by ${formatCurrency(Math.abs(impact))}`}
+                                  ></div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={`w-24 text-right text-xs font-bold font-mono tracking-tight ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {isPositive ? '+' : '-'}{formatCurrency(Math.abs(impact))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  <div className="pt-3 mt-3 border-t border-slate-700 flex justify-between text-xs text-slate-400 bg-slate-800/50 p-3 rounded-lg">
+                    <span>Baseline Average: <strong className="text-slate-300">{formatCurrency(result.xai.base_value)}</strong></span>
+                    <span>Predicted Price: <strong className="text-white">{formatCurrency(result.price_per_perch)}</strong></span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        )}
-        
+
+        </div>
       </div>
     </div>
   );

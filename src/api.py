@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from catboost import CatBoostRegressor
 import pandas as pd
+import shap
+import numpy as np
 
 app = Flask(__name__)
 CORS(app)
@@ -17,9 +19,14 @@ try:
     model = CatBoostRegressor()
     model.load_model(MODEL_PATH)
     print("Model loaded successfully.")
+    
+    # Initialize SHAP explainer
+    explainer = shap.TreeExplainer(model)
+    print("SHAP explainer initialized.")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    print(f"Error loading model or SHAP: {e}")
     model = None
+    explainer = None
 
 # Extract District and City mappings
 location_mapping = {}
@@ -42,9 +49,9 @@ def get_locations():
 
 @app.route('/api/predict', methods=['POST'])
 def predict():
-    """Predicts the land price per perch and total price"""
-    if model is None:
-        return jsonify({"error": "Model not loaded"}), 500
+    """Predicts the land price per perch and total price, and returns local XAI values"""
+    if model is None or explainer is None:
+        return jsonify({"error": "Model or Explainer not loaded"}), 500
         
     try:
         data = request.json
@@ -58,7 +65,6 @@ def predict():
             return jsonify({"error": "District and City are required"}), 400
 
         # Construct DataFrame in the identical format as training
-        # Features ordering from train_model.py: 'District', 'City', 'Land size', 'Availability of electricity', 'Availability of tap water'
         input_data = pd.DataFrame([{
             'District': district,
             'City': city,
@@ -71,13 +77,36 @@ def predict():
         price_per_perch = float(model.predict(input_data)[0])
         total_price = price_per_perch * land_size
         
+        # Calculate SHAP values
+        shap_values = explainer.shap_values(input_data)
+        
+        # Determine base value format safely
+        expected_value = explainer.expected_value
+        base_value = float(expected_value[0] if isinstance(expected_value, (list, np.ndarray)) else expected_value)
+
+        # Feature contributions array
+        # Features: 'District', 'City', 'Land size', 'Availability of electricity', 'Availability of tap water'
+        feature_contributions = {
+            "District": float(shap_values[0][0]),
+            "City": float(shap_values[0][1]),
+            "Land Size": float(shap_values[0][2]),
+            "Electricity": float(shap_values[0][3]),
+            "Tap Water": float(shap_values[0][4])
+        }
+        
         return jsonify({
             "price_per_perch": price_per_perch,
             "total_price": total_price,
-            "land_size": land_size
+            "land_size": land_size,
+            "xai": {
+                "base_value": base_value,
+                "contributions": feature_contributions
+            }
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 400
 
 if __name__ == '__main__':

@@ -1,1 +1,59 @@
 /* App.css cleared for Tailwind usage */
+
+@media print {
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+
+    /* Force background colors and gradients to print */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+
+    /* Remove shadows and borders for cleaner printing */
+    .shadow-xl,
+    .shadow-sm {
+        box-shadow: none !important;
+        border-color: #e2e8f0 !important;
+    }
+
+    /* Force the dark card to be light with dark text for saving ink/readability */
+    .bg-\[\#0f172a\] {
+        background-color: white !important;
+        border: 2px solid #e2e8f0 !important;
+    }
+
+    .text-slate-100,
+    .text-white,
+    .text-transparent {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    .text-slate-400 {
+        color: #475569 !important;
+    }
+
+    /* Ensure the SHAP chart prints properly */
+    .bg-slate-900\/50 {
+        background-color: #f8fafc !important;
+        border-top: 1px solid #e2e8f0 !important;
+    }
+
+    .bg-slate-800\/50 {
+        background-color: #e2e8f0 !important;
+    }
+
+    .bg-slate-600 {
+        background-color: #94a3b8 !important;
+        /* Zero line */
+    }
+
+    /* Hide print-specific buttons (already handled by 'print:hidden' in Tailwind but as a fallback) */
+    button {
+        display: none !important;
+    }
+}
