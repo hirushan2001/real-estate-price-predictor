@@ -9,7 +9,7 @@ import concurrent.futures
 # Constraints & Scope
 TARGET_COUNT = 5000
 LIST_PAGE_DELAY = 0.5
-MAX_WORKERS = 25 # Concurrent connections for rapid fetching
+MAX_WORKERS = 25 
 OUTPUT_FILE = 'data/raw/land_data_final.csv'
 
 # Headers - Updated with separate District and City columns

@@ -36,7 +36,7 @@ def main():
     print("\n--- BASELINE MODEL COMPARISON ---")
     print("4a. Training Random Forest Baseline...")
     
-    # Preprocessing for baseline (Random Forest needs numerical inputs)
+    # Preprocessing for baseline 
     preprocessor = ColumnTransformer(
         transformers=[
             ('cat', OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1), ['District', 'City'])
@@ -79,14 +79,13 @@ def main():
     random_search = RandomizedSearchCV(
         estimator=cb_base,
         param_distributions=param_grid,
-        n_iter=5, # Limit iterations for faster execution in assignments
+        n_iter=5, 
         cv=3,
         scoring='neg_root_mean_squared_error',
         random_state=42,
         n_jobs=-1
     )
     
-    # We fit random search without early stopping to find best combo params roughly
     random_search.fit(X_train, y_train, cat_features=categorical_features_indices)
     
     print(f"Best Hyperparameters found: {random_search.best_params_}")
@@ -125,7 +124,6 @@ def main():
     explainer = shap.TreeExplainer(final_model)
     shap_values = explainer.shap_values(X_test)
     
-    # Ensure matplotlib uses a non-interactive backend
     plt.switch_backend('Agg')
     plt.figure()
     shap.summary_plot(shap_values, X_test, show=False)

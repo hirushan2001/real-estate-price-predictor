@@ -24,7 +24,7 @@ def clean_dataset():
     columns_to_drop = ['Listing title', 'Road access type', 'Posted date', 'Listing URL']
     df = df.drop(columns=[col for col in columns_to_drop if col in df.columns], errors='ignore')
     
-    # 4. CRITICAL STEP: Drop the 'Total price (LKR)' column to prevent target leakage
+    # 4. Drop the 'Total price (LKR)' column to prevent target leakage
     if 'Total price (LKR)' in df.columns:
         df = df.drop(columns=['Total price (LKR)'])
         print("Dropped 'Total price (LKR)' to prevent target leakage.")
@@ -36,7 +36,6 @@ def clean_dataset():
     df.replace('null', np.nan, inplace=True)
     df.replace('unknown', np.nan, inplace=True)
     
-    # Convert 'Price per perch' and 'Land size' to numeric first, invalid parsing will be set to NaN
     # This ensures string text that might be inside numeric columns are coerced to NaN
     df['Price per perch'] = pd.to_numeric(df['Price per perch'], errors='coerce')
     df['Land size'] = pd.to_numeric(df['Land size'], errors='coerce')
