@@ -1,4 +1,7 @@
 import os
+import sys
+sys.modules['_wmi'] = None
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from catboost import CatBoostRegressor
